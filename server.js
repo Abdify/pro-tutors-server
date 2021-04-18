@@ -131,6 +131,7 @@ client.connect((err) => {
 
     app.post("/enrollCourse", verifyJwt, (req, res) => {
         const enrollInfo = req.body;
+        enrollInfo.course.status = "Ongoing";
         usersCollection.findOneAndUpdate({uid: req.uid}, {
             $push: {
                 enrolledCourses: enrollInfo.course._id,
@@ -169,6 +170,42 @@ client.connect((err) => {
                 res.send(courses);
             })
         })
+    });
+
+    app.delete("/courses/:id", (req, res) => {
+        const id = req.params.id;
+        coursesCollection
+            .findOneAndDelete({ _id: ObjectId(id) })
+            .then((deletedCourse) => {
+                if (deletedCourse) {
+                    res.send({
+                        deleted: true,
+                        message: `Successfully deleted course: ${deletedCourse}.`,
+                    });
+                } else {
+                    res.send({ deleted: false, message: "No course matches the provided id." });
+                }
+            })
+            .catch((err) =>
+                res.send({
+                    deleted: false,
+                    message: `Failed to find and delete course: ${err}`,
+                })
+            );
+    });
+
+    app.put("/changeEnrollStatus", verifyJwt, (req, res) => {
+        enrollsCollection
+            .findOneAndUpdate(
+                { _id: ObjectId(req.body.enrollId) },
+                {
+                    $set: { "course.status": req.body.status },
+                }
+            )
+            .then((result) => {
+                console.log(result);
+                res.send(result.lastErrorObject.updatedExisting);
+            });
     });
 });
 
